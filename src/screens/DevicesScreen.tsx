@@ -15,6 +15,14 @@ import Section from '../components/Section';
 import StatusPill from '../components/StatusPill';
 import {apiRequest} from '../api/client';
 import {getOrCreateDeviceId} from '../storage/deviceId';
+import {openNotificationSettings} from '../notifications/bridge';
+import {
+  useNotificationPermission,
+  useTodayCount,
+  useQueueSize,
+  useFlowStatus,
+} from '../notifications/hooks';
+import {flushNow} from '../notifications/capture';
 
 type StatusResponse = {
   devices?: any[];
@@ -50,6 +58,12 @@ export default function DevicesScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [thisDeviceId, setThisDeviceId] = useState<string | null>(null);
+  const {granted, refresh, connected} = useNotificationPermission();
+  const count = useTodayCount();
+  const queued = useQueueSize();
+  const flow = useFlowStatus(granted);
+  const [flushing, setFlushing] = useState(false);
+  const [flushResult, setFlushResult] = useState<string | null>(null);
 
   useEffect(() => {
     getOrCreateDeviceId().then(setThisDeviceId);
@@ -71,6 +85,21 @@ export default function DevicesScreen() {
   useEffect(() => {
     load();
   }, [load]);
+
+  const handleFlush = async () => {
+    setFlushing(true);
+    setFlushResult(null);
+    try {
+      const r = await flushNow();
+      setFlushResult(
+        r.lastError
+          ? `Sent ${r.sent}, ${r.remaining} queued, error: ${r.lastError.slice(0, 80)}`
+          : `Sent ${r.sent}, ${r.remaining} queued`,
+      );
+    } finally {
+      setFlushing(false);
+    }
+  };
 
   const devices = Array.isArray(data?.devices) ? data!.devices! : [];
 
@@ -97,6 +126,74 @@ export default function DevicesScreen() {
               tintColor={colors.accent}
             />
           }>
+          <Section title="NOTIFICATION CAPTURE">
+            <Card accent={flow === 'flowing'}>
+              <View style={styles.row}>
+                <View style={styles.flex1}>
+                  <Text style={styles.itemTitle}>
+                    Notification access:{' '}
+                    <Text
+                      style={{
+                        color:
+                          granted === null
+                            ? colors.textMuted
+                            : granted
+                            ? colors.ok
+                            : colors.danger,
+                      }}>
+                      {granted === null ? '…' : granted ? 'Granted' : 'Denied'}
+                    </Text>
+                  </Text>
+                  <Text style={styles.itemMeta}>
+                    Service connected: {connected ? 'yes' : 'no'}
+                  </Text>
+                  <Text style={styles.itemMeta}>
+                    Captured today: {count}
+                  </Text>
+                  <Text style={styles.itemMeta}>
+                    Queued (offline): {queued}
+                  </Text>
+                </View>
+                <StatusPill
+                  label={flowLabel(flow)}
+                  tone={flowTone(flow)}
+                />
+              </View>
+
+              <View style={styles.btnRow}>
+                <Pressable
+                  onPress={async () => {
+                    await openNotificationSettings();
+                    setTimeout(refresh, 500);
+                  }}
+                  style={({pressed}) => [
+                    styles.btn,
+                    styles.btnSecondary,
+                    pressed && {opacity: 0.7},
+                  ]}>
+                  <Text style={styles.btnSecondaryText}>
+                    {granted ? 'Manage access' : 'Grant access'}
+                  </Text>
+                </Pressable>
+                <Pressable
+                  onPress={handleFlush}
+                  disabled={flushing}
+                  style={({pressed}) => [
+                    styles.btn,
+                    styles.btnPrimary,
+                    (pressed || flushing) && {opacity: 0.7},
+                  ]}>
+                  <Text style={styles.btnPrimaryText}>
+                    {flushing ? 'Flushing…' : 'Flush now'}
+                  </Text>
+                </Pressable>
+              </View>
+              {flushResult && (
+                <Text style={styles.flushResult}>{flushResult}</Text>
+              )}
+            </Card>
+          </Section>
+
           <Section title="CONNECTED" count={devices.length}>
             {devices.length === 0 ? (
               <Text style={styles.empty}>
@@ -171,6 +268,32 @@ export default function DevicesScreen() {
   );
 }
 
+function flowLabel(flow: 'denied' | 'flowing' | 'idle' | 'unknown'): string {
+  switch (flow) {
+    case 'flowing':
+      return 'Flowing';
+    case 'idle':
+      return 'Idle';
+    case 'denied':
+      return 'Denied';
+    default:
+      return '…';
+  }
+}
+
+function flowTone(flow: 'denied' | 'flowing' | 'idle' | 'unknown'): 'ok' | 'warn' | 'danger' | 'muted' {
+  switch (flow) {
+    case 'flowing':
+      return 'ok';
+    case 'idle':
+      return 'warn';
+    case 'denied':
+      return 'danger';
+    default:
+      return 'muted';
+  }
+}
+
 const styles = StyleSheet.create({
   safe: {flex: 1, backgroundColor: colors.bg},
   header: {
@@ -197,6 +320,27 @@ const styles = StyleSheet.create({
   kvKey: {color: colors.textMuted},
   empty: {color: colors.textMuted, fontStyle: 'italic'},
   center: {flex: 1, alignItems: 'center', justifyContent: 'center'},
+  btnRow: {flexDirection: 'row', marginTop: spacing.md, gap: spacing.sm},
+  btn: {
+    flex: 1,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    borderRadius: radii.md,
+    alignItems: 'center',
+  },
+  btnPrimary: {backgroundColor: colors.accent},
+  btnPrimaryText: {color: colors.textPrimary, fontWeight: '700'},
+  btnSecondary: {
+    borderColor: colors.accentBorder,
+    borderWidth: 1,
+    backgroundColor: 'transparent',
+  },
+  btnSecondaryText: {color: colors.accent, fontWeight: '600'},
+  flushResult: {
+    color: colors.textSecondary,
+    fontSize: fontSizes.xs,
+    marginTop: spacing.sm,
+  },
   resyncBtn: {
     marginTop: spacing.lg,
     padding: spacing.md,

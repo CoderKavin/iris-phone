@@ -13,6 +13,7 @@ import {
 import {SafeAreaView} from 'react-native-safe-area-context';
 import {colors, fontSizes, radii, spacing} from '../theme/colors';
 import {apiRequest} from '../api/client';
+import {useFlowStatus, useNotificationPermission} from '../notifications/hooks';
 
 type Msg = {
   id: string;
@@ -34,6 +35,8 @@ export default function ChatScreen() {
   const [loading, setLoading] = useState(false);
   const [coldStart, setColdStart] = useState(false);
   const listRef = useRef<FlatList<Msg>>(null);
+  const {granted} = useNotificationPermission();
+  const flow = useFlowStatus(granted);
 
   const send = useCallback(async () => {
     const text = input.trim();
@@ -88,7 +91,15 @@ export default function ChatScreen() {
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}>
         <View style={styles.header}>
-          <Text style={styles.headerTitle}>IRIS</Text>
+          <View style={styles.headerRow}>
+            <Text style={styles.headerTitle}>IRIS</Text>
+            <View
+              style={[
+                styles.flowDot,
+                {backgroundColor: flowDotColor(flow)},
+              ]}
+            />
+          </View>
           <Text style={styles.headerSub}>cloud brain</Text>
         </View>
         <FlatList
@@ -163,6 +174,19 @@ function MessageBubble({msg}: {msg: Msg}) {
   );
 }
 
+function flowDotColor(flow: 'denied' | 'flowing' | 'idle' | 'unknown'): string {
+  switch (flow) {
+    case 'flowing':
+      return colors.ok;
+    case 'idle':
+      return colors.warn;
+    case 'denied':
+      return colors.danger;
+    default:
+      return colors.textMuted;
+  }
+}
+
 const styles = StyleSheet.create({
   safe: {flex: 1, backgroundColor: colors.bg},
   flex: {flex: 1},
@@ -171,6 +195,13 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.md,
     borderBottomColor: colors.border,
     borderBottomWidth: 1,
+  },
+  headerRow: {flexDirection: 'row', alignItems: 'center'},
+  flowDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    marginLeft: spacing.sm,
   },
   headerTitle: {
     color: colors.textPrimary,

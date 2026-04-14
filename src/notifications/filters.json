@@ -1,0 +1,121 @@
+{
+  "version": 1,
+  "whitelist": {
+    "messaging": [
+      "com.whatsapp",
+      "com.whatsapp.w4b",
+      "com.samsung.android.messaging",
+      "com.google.android.apps.messaging",
+      "org.thoughtcrime.securesms",
+      "org.telegram.messenger",
+      "com.facebook.orca",
+      "com.discord",
+      "com.Slack"
+    ],
+    "email": [
+      "com.google.android.gm",
+      "com.microsoft.office.outlook",
+      "com.samsung.android.email.provider"
+    ],
+    "calendar": [
+      "com.google.android.calendar",
+      "com.samsung.android.calendar"
+    ],
+    "maps_transit": [
+      "com.google.android.apps.maps",
+      "com.ubercab",
+      "com.olacabs.customer",
+      "com.rapido.passenger"
+    ],
+    "banking_payments": [
+      "com.google.android.apps.nbu.paisa.user",
+      "net.one97.paytm",
+      "com.phonepe.app",
+      "com.mobikwik_new"
+    ],
+    "productivity": [
+      "notion.id",
+      "com.todoist",
+      "com.microsoft.teams"
+    ],
+    "calls": [
+      "com.android.dialer",
+      "com.samsung.android.dialer",
+      "com.samsung.android.incallui",
+      "com.google.android.dialer"
+    ]
+  },
+  "blacklist": {
+    "games_prefix": [
+      "com.king.",
+      "com.supercell.",
+      "com.rovio.",
+      "com.ea.game",
+      "com.ea.games",
+      "com.ubisoft.",
+      "com.activision."
+    ],
+    "social_feeds": [
+      "com.instagram.android",
+      "com.snapchat.android",
+      "com.zhiliaoapp.musically",
+      "com.ss.android.ugc.trill",
+      "com.facebook.katana",
+      "com.twitter.android",
+      "com.reddit.frontpage",
+      "com.linkedin.android"
+    ],
+    "shopping": [
+      "com.amazon.mShop.android.shopping",
+      "com.flipkart.android",
+      "com.myntra.android",
+      "com.shopify"
+    ],
+    "system": [
+      "com.android.systemui",
+      "com.samsung.android.lool",
+      "com.google.android.gms",
+      "com.samsung.android.tvplus",
+      "com.samsung.android.app.reminder",
+      "com.sec.android.app.launcher",
+      "com.sec.android.daemonapp",
+      "com.samsung.android.bixby.service",
+      "com.samsung.android.app.routines"
+    ],
+    "news_media": [
+      "com.google.android.apps.magazines",
+      "com.spotify.music",
+      "com.netflix.mediaclient",
+      "com.google.android.youtube"
+    ],
+    "self": [
+      "com.iris.phone"
+    ],
+    "samsung_allowlist_exempt": [
+      "com.samsung.android.messaging",
+      "com.samsung.android.email.provider",
+      "com.samsung.android.calendar",
+      "com.samsung.android.dialer",
+      "com.samsung.android.incallui"
+    ]
+  },
+  "graylist": {
+    "health": [
+      "com.sec.android.app.shealth",
+      "com.samsung.android.app.health",
+      "com.google.android.apps.fitness",
+      "com.withings.wiscale2"
+    ],
+    "password_managers": [
+      "com.lastpass.lpandroid",
+      "com.lastpass.authenticator",
+      "com.onepassword.android",
+      "com.x8bit.bitwarden"
+    ],
+    "crypto": [
+      "com.coinbase.android",
+      "io.metamask",
+      "com.wallet.crypto.trustapp"
+    ]
+  }
+}
