@@ -1,4 +1,7 @@
-import notifee, {AndroidImportance} from '@notifee/react-native';
+import notifee, {
+  AndroidImportance,
+  AndroidForegroundServiceType,
+} from '@notifee/react-native';
 import {Platform} from 'react-native';
 
 const CHANNEL_ID = 'iris-foreground';
@@ -30,6 +33,9 @@ export async function startForegroundService(): Promise<void> {
     android: {
       channelId: CHANNEL_ID,
       asForegroundService: true,
+      foregroundServiceTypes: [
+        AndroidForegroundServiceType.FOREGROUND_SERVICE_TYPE_DATA_SYNC,
+      ],
       ongoing: true,
       smallIcon: 'ic_launcher',
       pressAction: {id: 'default'},
