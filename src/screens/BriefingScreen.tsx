@@ -14,10 +14,16 @@ import Section from '../components/Section';
 import {apiRequest} from '../api/client';
 
 type Situation = {
-  persona?: string | {summary?: string; [k: string]: any};
-  calendar?: any[] | {events?: any[]; [k: string]: any};
-  relationships?: any;
-  commitments?: any[];
+  profile?: string;
+  persona?: string | {summary?: string};
+  contacts?: Array<{name?: string; email?: string; score?: number}>;
+  awaiting_reply?: Array<{subject?: string; from?: string}>;
+  stale_threads?: Array<{subject?: string; stale_days?: number}>;
+  upcoming_events?: any[];
+  calendar?: any[] | {events?: any[]};
+  commitments?: Array<{description?: string; due?: string}> | {items?: any[]};
+  recent_documents?: Array<{filename?: string; type?: string}>;
+  observation_counts?: Record<string, number>;
   [k: string]: any;
 };
 
@@ -30,27 +36,40 @@ function timeOfDay(): string {
   return 'Tonight';
 }
 
-function asString(v: unknown): string {
-  if (typeof v === 'string') return v;
-  if (v && typeof v === 'object') {
-    const s = (v as any).summary ?? (v as any).text ?? null;
-    if (typeof s === 'string') return s;
-    return JSON.stringify(v, null, 2);
+function getProfile(s: Situation | null): string {
+  if (!s) return '';
+  if (typeof s.profile === 'string') return s.profile;
+  if (typeof s.persona === 'string') return s.persona;
+  if (s.persona && typeof s.persona === 'object') {
+    return (s.persona as any).summary ?? '';
   }
-  if (v == null) return '';
-  return String(v);
+  return '';
 }
 
-function getCalendarEvents(c: any): any[] {
-  if (!c) return [];
-  if (Array.isArray(c)) return c;
-  if (Array.isArray(c.events)) return c.events;
+function stripMarkup(s: string): string {
+  return s
+    .replace(/<!--[\s\S]*?-->/g, '')
+    .replace(/\*\*/g, '')
+    .replace(/\*/g, '')
+    .trim();
+}
+
+function getEvents(s: Situation | null): any[] {
+  if (!s) return [];
+  if (Array.isArray(s.upcoming_events)) return s.upcoming_events;
+  if (Array.isArray(s.calendar)) return s.calendar;
+  if (s.calendar && Array.isArray((s.calendar as any).events)) {
+    return (s.calendar as any).events;
+  }
   return [];
 }
 
-function getCommitments(c: any): any[] {
-  if (Array.isArray(c)) return c;
-  if (c && Array.isArray(c.items)) return c.items;
+function getCommitments(s: Situation | null): any[] {
+  if (!s) return [];
+  if (Array.isArray(s.commitments)) return s.commitments;
+  if (s.commitments && Array.isArray((s.commitments as any).items)) {
+    return (s.commitments as any).items;
+  }
   return [];
 }
 
@@ -77,9 +96,11 @@ export default function BriefingScreen() {
     load();
   }, [load]);
 
-  const persona = asString(data?.persona);
-  const events = getCalendarEvents(data?.calendar);
-  const commitments = getCommitments(data?.commitments);
+  const profile = stripMarkup(getProfile(data));
+  const events = getEvents(data);
+  const commitments = getCommitments(data);
+  const awaiting = Array.isArray(data?.awaiting_reply) ? data!.awaiting_reply! : [];
+  const stale = Array.isArray(data?.stale_threads) ? data!.stale_threads! : [];
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
@@ -108,12 +129,12 @@ export default function BriefingScreen() {
           <Section title="WHO YOU ARE">
             <Card>
               <Text style={styles.body}>
-                {persona || 'Persona not yet established.'}
+                {profile || 'Persona not yet established.'}
               </Text>
             </Card>
           </Section>
 
-          <Section title="CALENDAR" count={events.length}>
+          <Section title="UPCOMING" count={events.length}>
             {events.length === 0 ? (
               <Text style={styles.empty}>No events.</Text>
             ) : (
@@ -122,8 +143,10 @@ export default function BriefingScreen() {
                   <Text style={styles.itemTitle}>
                     {e.summary ?? e.title ?? 'Event'}
                   </Text>
-                  {!!(e.start ?? e.time) && (
-                    <Text style={styles.itemMeta}>{e.start ?? e.time}</Text>
+                  {!!(e.start ?? e.time ?? e.when) && (
+                    <Text style={styles.itemMeta}>
+                      {e.start ?? e.time ?? e.when}
+                    </Text>
                   )}
                   {!!e.location && (
                     <Text style={styles.itemMeta}>{e.location}</Text>
@@ -137,12 +160,42 @@ export default function BriefingScreen() {
             {commitments.length === 0 ? (
               <Text style={styles.empty}>None.</Text>
             ) : (
-              commitments.map((c: any, i: number) => (
+              commitments.slice(0, 8).map((c: any, i: number) => (
                 <Card key={`c-${i}`} style={styles.itemCard}>
                   <Text style={styles.itemTitle}>
-                    {c.text ?? c.title ?? c.description ?? 'Commitment'}
+                    {c.description ?? c.text ?? c.title ?? 'Commitment'}
                   </Text>
                   {!!c.due && <Text style={styles.itemMeta}>Due: {c.due}</Text>}
+                </Card>
+              ))
+            )}
+          </Section>
+
+          <Section title="AWAITING REPLY" count={awaiting.length}>
+            {awaiting.length === 0 ? (
+              <Text style={styles.empty}>Inbox quiet.</Text>
+            ) : (
+              awaiting.slice(0, 6).map((a: any, i: number) => (
+                <Card key={`a-${i}`} style={styles.itemCard}>
+                  <Text style={styles.itemTitle}>{a.subject ?? '(no subject)'}</Text>
+                  {!!a.from && <Text style={styles.itemMeta}>from {a.from}</Text>}
+                </Card>
+              ))
+            )}
+          </Section>
+
+          <Section title="STALE THREADS" count={stale.length}>
+            {stale.length === 0 ? (
+              <Text style={styles.empty}>None.</Text>
+            ) : (
+              stale.slice(0, 6).map((t: any, i: number) => (
+                <Card key={`t-${i}`} style={styles.itemCard}>
+                  <Text style={styles.itemTitle}>
+                    {t.subject || '(no subject)'}
+                  </Text>
+                  {typeof t.stale_days === 'number' && (
+                    <Text style={styles.itemMeta}>{t.stale_days}d stale</Text>
+                  )}
                 </Card>
               ))
             )}

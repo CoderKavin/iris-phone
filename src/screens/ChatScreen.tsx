@@ -49,17 +49,17 @@ export default function ChatScreen() {
     setLoading(true);
     setColdStart(false);
     try {
-      const res = await apiRequest<{response?: string; reply?: string; text?: string}>(
+      const res = await apiRequest<{text?: string; response?: string; reply?: string}>(
         '/api/chat',
         {
           method: 'POST',
-          body: {query: text, message: text, source: 'phone'},
+          body: {content: text, source: 'phone'},
           timeoutMs: 60000,
           onColdStart: () => setColdStart(true),
         },
       );
       const reply =
-        res?.response ?? res?.reply ?? res?.text ?? JSON.stringify(res);
+        res?.text ?? res?.response ?? res?.reply ?? JSON.stringify(res);
       setMessages(prev => [
         ...prev,
         {id: `i-${Date.now()}`, role: 'iris', text: reply, ts: Date.now()},

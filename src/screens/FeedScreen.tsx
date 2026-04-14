@@ -40,7 +40,7 @@ type Row =
 
 const SECTIONS: {key: keyof FeedResponse | string; title: string; accent?: boolean; alts?: string[]}[] =
   [
-    {key: 'urgent_now', title: 'URGENT NOW', accent: true},
+    {key: 'urgent', title: 'URGENT NOW', accent: true, alts: ['urgent_now']},
     {key: 'today', title: 'TODAY'},
     {key: 'noticed', title: 'WHAT IRIS NOTICED', alts: ['what_iris_noticed']},
   ];
@@ -151,15 +151,19 @@ export default function FeedScreen() {
 }
 
 function FeedCard({item, accent}: {item: FeedItem; accent?: boolean}) {
-  const title = item.title ?? item.source ?? 'Item';
-  const body = item.text ?? item.body ?? item.description ?? '';
+  const titleRaw =
+    item.title ?? item.text ?? item.body ?? item.description ?? item.source ?? 'Item';
+  const title = String(titleRaw).slice(0, 140);
+  const body =
+    item.title && (item.text || item.body || item.description)
+      ? item.text ?? item.body ?? item.description
+      : '';
+  const meta = item.timestamp ?? item.detected ?? item.urgency ?? item.type;
   return (
     <Card accent={accent} style={styles.card}>
       <Text style={styles.cardTitle}>{title}</Text>
-      {!!body && <Text style={styles.cardBody}>{body}</Text>}
-      {!!item.timestamp && (
-        <Text style={styles.cardMeta}>{item.timestamp}</Text>
-      )}
+      {!!body && <Text style={styles.cardBody}>{String(body)}</Text>}
+      {!!meta && <Text style={styles.cardMeta}>{String(meta)}</Text>}
     </Card>
   );
 }
